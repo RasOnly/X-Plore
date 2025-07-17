@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'discover_page.dart';
-import 'favorite.dart';
-import 'review_list_page.dart';
-import 'semua_destinasi.dart';
+import 'package:ras/pages/review_list_page.dart';
+import 'package:ras/pages/discover_page.dart';
+import 'package:ras/pages/favorite.dart';
+import 'package:ras/pages/semua_destinasi.dart';
 
 class DetailWisataPage extends StatefulWidget {
   final String nama;

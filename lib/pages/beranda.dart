@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:ras/widget/buildRestoranCard.dart';
 import 'semua_destinasi.dart';
 import 'semua_restoran.dart';
 import 'semua_penginapan.dart';
@@ -310,17 +311,35 @@ class _BerandaPageState extends State<BerandaPage> {
                   ),
                   const SizedBox(height: 8),
                   Column(
-                    // Menggunakan Column untuk menampilkan daftar vertikal
+                    // Wrap with Column to make it scrollable vertically within ListView
                     children:
                         _restoranPopuler.map((restoran) {
                           return Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 8,
+                            ), // Padding antar kartu
+                            child: _penginapanCard(
+                              // Menggunakan fungsi _penginapanCard yang baru
+                              title: restoran['nama'],
+                              imagePath: restoran['image'],
+                              rating: restoran['rating'],
+                              dekat:
+                                  restoran['lokasi'] ??
+                                  '', // Teruskan data 'dekat'
                             ),
                           );
                         }).toList(),
                   ),
+
+                  // _restoranPopuler.map((restoran) {
+                  //   return Padding(
+                  //     padding: const EdgeInsets.symmetric(
+                  //       horizontal: 16,
+                  //       vertical: 8,
+                  //     ),
+                  //   );
+                  // }).toList(),
                   const SizedBox(height: 20),
                   const SizedBox(height: 20),
                   _sectionTitle(
