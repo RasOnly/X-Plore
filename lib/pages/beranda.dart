@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:ras/pages/detail_restoran.dart';
 import 'package:ras/widget/buildRestoranCard.dart';
 import 'semua_destinasi.dart';
 import 'semua_restoran.dart';
@@ -310,36 +311,44 @@ class _BerandaPageState extends State<BerandaPage> {
                     },
                   ),
                   const SizedBox(height: 8),
-                  Column(
-                    // Wrap with Column to make it scrollable vertically within ListView
-                    children:
-                        _restoranPopuler.map((restoran) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ), // Padding antar kartu
-                            child: _penginapanCard(
-                              // Menggunakan fungsi _penginapanCard yang baru
-                              title: restoran['nama'],
-                              imagePath: restoran['image'],
-                              rating: restoran['rating'],
-                              dekat:
-                                  restoran['lokasi'] ??
-                                  '', // Teruskan data 'dekat'
-                            ),
-                          );
-                        }).toList(),
+                  SizedBox(
+                    height: 170,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: [
+                        _restoranCard(
+                          title: 'Pantai Tanjung Bira',
+                          imagePath: 'assets/images/bira.png',
+                          rating: '4,6',
+                          location: 'Bira, Bulukumba',
+                          description:
+                              'Pantai Tanjung Bira adalah salah satu destinasi wisata populer di Sulawesi Selatan...',
+                          reviewCount: '2.002',
+                        ),
+                        const SizedBox(width: 16),
+                        _restoranCard(
+                          title: 'Taman Purbakala Sumpang Bita',
+                          imagePath: 'assets/images/sumpang_bita.png',
+                          rating: '4,6',
+                          location: 'Pangkep, Sulawesi Selatan',
+                          description:
+                              'Taman Purbakala Sumpang Bita adalah situs purbakala yang memiliki nilai sejarah tinggi...',
+                          reviewCount: '1.200',
+                        ),
+                        const SizedBox(width: 16),
+                        _restoranCard(
+                          title: 'Benteng Rotterdam',
+                          imagePath: 'assets/images/rotterdam.png',
+                          rating: '4,5',
+                          location: 'Makassar',
+                          description:
+                              'Benteng Rotterdam adalah benteng peninggalan Belanda yang bersejarah di Makassar.',
+                          reviewCount: '1.500',
+                        ),
+                      ],
+                    ),
                   ),
-
-                  // _restoranPopuler.map((restoran) {
-                  //   return Padding(
-                  //     padding: const EdgeInsets.symmetric(
-                  //       horizontal: 16,
-                  //       vertical: 8,
-                  //     ),
-                  //   );
-                  // }).toList(),
                   const SizedBox(height: 20),
                   const SizedBox(height: 20),
                   _sectionTitle(
@@ -456,6 +465,80 @@ class _BerandaPageState extends State<BerandaPage> {
                   image: imagePath,
                   rating: rating,
                   semuaDestinasi: _semuaDestinasi,
+                ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+            transitionDuration: const Duration(milliseconds: 400),
+          ),
+        );
+      },
+      child: Container(
+        width: 150,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              child: Image.asset(
+                imagePath,
+                height: 90,
+                width: 150,
+                fit: BoxFit.cover,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 13),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.star, color: Colors.amber, size: 16),
+                  const SizedBox(width: 4),
+                  Text(rating, style: const TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _restoranCard({
+    required String title,
+    required String imagePath,
+    required String rating,
+    required String location,
+    required String description,
+    required String reviewCount,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder:
+                (context, animation, secondaryAnimation) => DetailRestoranPage(
+                  nama: title,
+                  image: imagePath,
+                  rating: rating,
+                  dekat: location,
+                  semuaRestoran: _restoranPopuler,
                 ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) =>
