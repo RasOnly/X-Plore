@@ -1,33 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:ras/models/kuliner.dart';
+import 'package:ras/services/api_service.dart';
 import 'detail_restoran.dart';
 import 'discover_page.dart';
-
-final List<Map<String, dynamic>> semuaRestoranData = [
-  {
-    'nama': 'RM Seafood Apong',
-    'image': 'assets/images/seafood_apong.png',
-    'rating': '4.6',
-    'lokasi': 'Dekat Pantai Losari, Hotel Aryaduta Makassar',
-  },
-  {
-    'nama': 'Coto Nusantara',
-    'image': 'assets/images/coto_nusantara.png',
-    'rating': '4.5',
-    'lokasi': 'Dekat Benteng Rotterdam, Pantai Losari',
-  },
-  {
-    'nama': 'Pallubasa Serigala',
-    'image': 'assets/images/pallubasa_serigala.png',
-    'rating': '4.7',
-    'lokasi': 'Dekat Hotel Aryaduta, Pantai Losari',
-  },
-  {
-    'nama': 'Konro Karebosi',
-    'image': 'assets/images/konro_karebosi.png',
-    'rating': '4.6',
-    'lokasi': 'Dekat Kantor Gubernur, Pusat Kota',
-  },
-];
 
 class SemuaRestoranPage extends StatefulWidget {
   const SemuaRestoranPage({super.key});
@@ -38,34 +13,48 @@ class SemuaRestoranPage extends StatefulWidget {
 
 class _SemuaRestoranPageState extends State<SemuaRestoranPage> {
   final TextEditingController _searchController = TextEditingController();
-
-  // Filtered list based on search query
-  List<Map<String, dynamic>> _filteredRestoran = [];
+  List<Kuliner> _semuaRestoran = [];
+  List<Kuliner> _filteredRestoran = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _filteredRestoran = semuaRestoranData; // Initialize with full list
+    _fetchRestoran();
     _searchController.addListener(_filterRestoran);
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Future<void> _fetchRestoran() async {
+    try {
+      final data = await ApiService().getAllKuliner();
+      setState(() {
+        _semuaRestoran = data.map((e) => Kuliner.fromJson(e)).toList();
+        _filteredRestoran = _semuaRestoran;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      debugPrint('Error memuat restoran: $e');
+    }
+  }
+
+  void _filterRestoran() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredRestoran =
+          _semuaRestoran
+              .where((r) => r.nama.toLowerCase().contains(query))
+              .toList();
+    });
   }
 
   void _navigateToTab(int index) {
-    if (index == 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fitur scan QR belum tersedia')),
-      );
-      return;
-    }
-    if (index == 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fitur peta belum tersedia')),
-      );
+    if (index == 2 || index == 1) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Fitur ini belum tersedia')));
       return;
     }
     Navigator.of(context).pushAndRemoveUntil(
@@ -74,15 +63,10 @@ class _SemuaRestoranPageState extends State<SemuaRestoranPage> {
     );
   }
 
-  void _filterRestoran() {
-    setState(() {
-      _filteredRestoran =
-          semuaRestoranData.where((restoran) {
-            final nameLower = (restoran['nama'] as String).toLowerCase();
-            final searchLower = _searchController.text.toLowerCase();
-            return nameLower.contains(searchLower);
-          }).toList();
-    });
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -92,206 +76,199 @@ class _SemuaRestoranPageState extends State<SemuaRestoranPage> {
         title: const Text(
           'Restoran',
           style: TextStyle(
-            color: Colors.blue, // Warna biru
-            fontFamily: 'Poppins', // Gunakan font Poppins
-            fontWeight: FontWeight.bold, // Bold sedang (600 = semi-bold)
+            color: Colors.blue,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white, // Mengatur warna AppBar menjadi putih
+        backgroundColor: Colors.white,
         elevation: 0,
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Cari restoran...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: const Color.fromARGB(255, 239, 239, 239),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child:
-                  _filteredRestoran.isEmpty
-                      ? Center(
-                        child: Text(
-                          'Tidak ada restoran ditemukan.',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
+        child:
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                  children: [
+                    TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Cari restoran...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
                         ),
-                      )
-                      : GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 1,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 408 / 333,
-                            ),
-                        itemCount: _filteredRestoran.length,
-                        itemBuilder: (context, index) {
-                          final item = _filteredRestoran[index];
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => DetailRestoranPage(
-                                        nama: item['nama'],
-                                        image: item['image'],
-                                        rating: item['rating'],
-                                        dekat: item['lokasi'],
-                                        semuaRestoran: semuaRestoranData,
-                                      ),
+                        filled: true,
+                        fillColor: const Color.fromARGB(255, 239, 239, 239),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child:
+                          _filteredRestoran.isEmpty
+                              ? Center(
+                                child: Text(
+                                  'Tidak ada restoran ditemukan.',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                  ),
                                 ),
-                              );
-                            },
-                            child: Container(
-                              width: 408, // Sesuai spesifikasi
-                              height: 333, // 253 (gambar) + 80 (info)
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(
-                                  8,
-                                ), // Border radius keseluruhan
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 4,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(8), // Top radius 8px
+                              )
+                              : GridView.builder(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 1,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      childAspectRatio: 408 / 333,
                                     ),
-                                    child: Image.asset(
-                                      item['image'],
-                                      width: 408, // Sesuai spesifikasi
-                                      height: 253, // Sesuai spesifikasi
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 408, // Sesuai spesifikasi
-                                    height: 80, // Sesuai spesifikasi
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.vertical(
-                                        bottom: Radius.circular(
-                                          8,
-                                        ), // Bottom radius 8px
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 19,
-                                      vertical: 14,
-                                    ), // Padding disesuaikan agar teks berada pada posisi yang diminta
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                item['nama'],
-                                                style: const TextStyle(
-                                                  fontSize:
-                                                      18, // Ukuran font disesuaikan
-                                                  fontWeight: FontWeight.bold,
-                                                  fontFamily: 'Poppins',
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
+                                itemCount: _filteredRestoran.length,
+                                itemBuilder: (context, index) {
+                                  final restoran = _filteredRestoran[index];
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => DetailRestoranPage(
+                                                kuliner: restoran,
+                                                semuaRestoran: _semuaRestoran,
                                               ),
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                children: [
-                                                  const Icon(
-                                                    Icons
-                                                        .location_on, // Icon lokasi
-                                                    color:
-                                                        Colors
-                                                            .grey, // Warna abu-abu
-                                                    size:
-                                                        16, // Ukuran disesuaikan
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Colors.black12,
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                  top: Radius.circular(8),
+                                                ),
+                                            child: Image.network(
+                                              restoran.image,
+                                              height: 253,
+                                              width: 408,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (_, __, ___) => const Icon(
+                                                    Icons.broken_image,
                                                   ),
-                                                  const SizedBox(width: 4),
-                                                  Expanded(
-                                                    child: Text(
-                                                      item['lokasi'],
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 19,
+                                              vertical: 14,
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        restoran.nama,
+                                                        style: const TextStyle(
+                                                          fontSize: 18,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily: 'Poppins',
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow:
+                                                            TextOverflow
+                                                                .ellipsis,
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Row(
+                                                        children: [
+                                                          const Icon(
+                                                            Icons.location_on,
+                                                            color: Colors.grey,
+                                                            size: 16,
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
+                                                          Expanded(
+                                                            child: Text(
+                                                              restoran.lokasi,
+                                                              style: const TextStyle(
+                                                                fontSize: 13,
+                                                                color:
+                                                                    Colors.grey,
+                                                                fontFamily:
+                                                                    'Poppins',
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.star,
+                                                      color: Colors.amber,
+                                                      size: 16,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      restoran.rating
+                                                          .toStringAsFixed(1),
                                                       style: const TextStyle(
-                                                        fontSize:
-                                                            13, // Ukuran font disesuaikan
-                                                        color:
-                                                            Colors
-                                                                .grey, // Warna abu-abu
+                                                        fontSize: 14,
                                                         fontFamily: 'Poppins',
                                                       ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
-                                          children: [
-                                            const Icon(
-                                              Icons.star,
-                                              color: Colors.amber,
-                                              size: 16,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              item['rating'] as String? ??
-                                                  '0.0',
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontFamily: 'Poppins',
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  );
+                                },
                               ),
-                            ),
-                          );
-                        },
-                      ),
-            ),
-          ],
-        ),
+                    ),
+                  ],
+                ),
       ),
       bottomNavigationBar: DiscoverNavBar(
         currentIndex: 0,

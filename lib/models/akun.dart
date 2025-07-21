@@ -1,30 +1,26 @@
-// lib/models/akun.dart
 class Akun {
   final int id;
-  final String nama;
+  final String username;
   final String email;
-  final String?
-  role; // Sesuaikan dengan struktur data Akun Anda dari backend Go
+  final String? userRole;
 
-  Akun({required this.id, required this.nama, required this.email, this.role});
+  Akun({
+    required this.id,
+    required this.username,
+    required this.email,
+    this.userRole,
+  });
 
-  // Factory constructor untuk membuat objek Akun dari JSON (data dari API)
   factory Akun.fromJson(Map<String, dynamic> json) {
     return Akun(
       id: json['id'] as int,
-      nama: json['nama'] as String,
+      username: json['username'] as String,
       email: json['email'] as String,
-      role: json['role'] as String?,
+      userRole: json['user_role'] as String?,
     );
   }
 
-  // Method untuk mengubah objek Akun menjadi JSON (untuk dikirim ke API)
   Map<String, dynamic> toJson() {
-    return {
-      'nama': nama,
-      'email': email,
-      // 'password': password, // Penting: Jangan sertakan password di model jika tidak diperlukan untuk request tertentu
-      'role': role,
-    };
+    return {'username': username, 'email': email, 'user_role': userRole};
   }
 }

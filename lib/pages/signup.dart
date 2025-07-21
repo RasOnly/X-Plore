@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ras/services/api_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -8,8 +9,81 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _nohpController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _agreeTerms = false;
+  bool _isLoading = false;
+
+  Future<void> _handleSignup() async {
+    if (!_agreeTerms) {
+      _showDialog(
+        "Peringatan",
+        "Silakan setujui Syarat & Ketentuan terlebih dahulu.",
+      );
+      return;
+    }
+
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final nohp = _nohpController.text.trim();
+
+    if (username.isEmpty || email.isEmpty || password.isEmpty || nohp.isEmpty) {
+      _showDialog("Peringatan", "Semua kolom wajib diisi.");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await ApiService().createAkun(
+        username: username,
+        email: email,
+        password: password,
+        userRole: "user", // default role
+        nohp: nohp,
+      );
+
+      _showDialog("Berhasil", "Akun anda sudah dibuat.");
+    } catch (e) {
+      _showDialog(
+        "Gagal",
+        "Terjadi kesalahan saat membuat akun.\n${e.toString()}",
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  if (title == "Berhasil") {
+                    Navigator.pop(context); // Kembali ke login
+                  }
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,53 +115,31 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 40),
 
+                // Username
+                _buildInputField("Username", _usernameController),
+                const SizedBox(height: 16),
+
                 // Email
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Email',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.all(16),
-                    ),
-                  ),
+                _buildInputField("Email", _emailController),
+                const SizedBox(height: 16),
+
+                // No HP
+                _buildInputField(
+                  "Nomor HP",
+                  _nohpController,
+                  keyboardType: TextInputType.phone,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // Password
                 Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                  decoration: _boxDecoration(),
                   child: TextField(
+                    controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       hintText: 'Kata Sandi',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
+                      border: _inputBorder(),
                       contentPadding: const EdgeInsets.all(16),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -104,9 +156,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 20),
 
-                // Masuk dengan Google
+                // Google login
                 Row(
                   children: [
                     const Text(
@@ -122,22 +175,20 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Checkbox persetujuan
+                // Checkbox syarat
                 Row(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.center, // Ubah jadi center
                   children: [
                     Checkbox(
                       value: _agreeTerms,
                       onChanged: (value) {
                         setState(() {
-                          _agreeTerms = value!;
+                          _agreeTerms = value ?? false;
                         });
                       },
                       visualDensity: const VisualDensity(
                         horizontal: -4,
                         vertical: -4,
-                      ), // Lebih rapat ke atas
+                      ),
                     ),
                     Expanded(
                       child: RichText(
@@ -166,35 +217,29 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 30),
 
-                // Tombol Daftar
+                // Tombol daftar
                 Container(
                   width: 180,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(30),
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFA5E2FF), // Biru muda
-                        Color(0xFF4EA3FE), // Biru tua
-                      ],
+                      colors: [Color(0xFFA5E2FF), Color(0xFF4EA3FE)],
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.25), // Hitam samar
-                        offset: const Offset(0, 4), // Geser ke bawah
-                        blurRadius: 12, // Efek blur
+                        color: Colors.black.withOpacity(0.25),
+                        offset: const Offset(0, 4),
+                        blurRadius: 12,
                         spreadRadius: 0,
                       ),
                     ],
                   ),
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Aksi ketika daftar ditekan
-                    },
+                    onPressed: _isLoading ? null : _handleSignup,
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
                       backgroundColor: Colors.transparent,
@@ -204,21 +249,25 @@ class _SignupScreenState extends State<SignupScreen> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: const Text(
-                      'Daftar',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 24,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child:
+                        _isLoading
+                            ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                            : const Text(
+                              'Daftar',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 24,
+                                color: Colors.white,
+                              ),
+                            ),
                   ),
                 ),
-
                 const SizedBox(height: 30),
 
-                // Masuk Sekarang
+                // Masuk sekarang
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -228,7 +277,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        Navigator.pop(context); // Kembali ke login
+                        Navigator.pop(context); // kembali ke login
                       },
                       child: const Text(
                         'Masuk Sekarang',
@@ -245,6 +294,43 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  // Helper untuk input form
+  Widget _buildInputField(
+    String hint,
+    TextEditingController controller, {
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Container(
+      decoration: _boxDecoration(),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          hintText: hint,
+          border: _inputBorder(),
+          contentPadding: const EdgeInsets.all(16),
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _boxDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: const [
+        BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+      ],
+    );
+  }
+
+  OutlineInputBorder _inputBorder() {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide.none,
     );
   }
 }

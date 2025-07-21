@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:ras/models/wisata.dart';
 import 'package:ras/pages/review_list_page.dart';
 import 'package:ras/pages/discover_page.dart';
 import 'package:ras/pages/favorite.dart';
-import 'package:ras/pages/semua_destinasi.dart';
 
 class DetailWisataPage extends StatefulWidget {
-  final String nama;
-  final String image;
-  final String rating;
-  final List<Map<String, dynamic>> semuaDestinasi; // Tambahkan parameter ini
+  final Wisata wisata;
+  final List<Wisata> semuaDestinasi;
 
   const DetailWisataPage({
     super.key,
-    required this.nama,
-    required this.image,
-    required this.rating,
-    required this.semuaDestinasi, // Tambahkan ini ke constructor
+    required this.wisata,
+    required this.semuaDestinasi,
   });
 
   @override
@@ -24,58 +20,41 @@ class DetailWisataPage extends StatefulWidget {
 
 class _DetailWisataPageState extends State<DetailWisataPage> {
   late List<String> images;
+  late List<Wisata> destinasiLainnya;
   int _currentImage = 0;
   final PageController _pageController = PageController();
-  List<Map<String, dynamic>> _destinasiLainnya =
-      []; // Untuk menyimpan destinasi lainnya
 
   @override
   void initState() {
     super.initState();
-    images = _getImagesForDestination(widget.nama, widget.image);
-    _filterDestinasiLainnya(); // Panggil fungsi filter saat inisialisasi
-  }
 
-  void _filterDestinasiLainnya() {
-    _destinasiLainnya =
+    images = _getImages(widget.wisata.nama, widget.wisata.image);
+
+    destinasiLainnya =
         widget.semuaDestinasi
-            .where((destinasi) => destinasi['nama'] != widget.nama)
+            .where((w) => w.id != widget.wisata.id)
+            .take(5)
             .toList();
-    // Opsional: Batasi jumlah destinasi yang ditampilkan jika terlalu banyak
-    if (_destinasiLainnya.length > 5) {
-      // Contoh: Hanya tampilkan 5 destinasi
-      _destinasiLainnya = _destinasiLainnya.sublist(0, 5);
-    }
   }
 
-  List<String> _getImagesForDestination(String nama, String defaultImage) {
-    switch (nama) {
-      case 'Pantai Tanjung Bira':
-        return [
-          'assets/images/pantai_bira1.jpg',
-          'assets/images/pantai_bira2.jpeg',
-          'assets/images/pantai_bira3.jpg',
-        ];
-      case 'Taman Purbakala Sumpang Bita':
-        return ['assets/images/sumpang_bita.png'];
-      case 'Negeri Diatas Awan':
-        return ['assets/images/negeri_awan.png'];
-      default:
-        return [defaultImage];
+  List<String> _getImages(String nama, String imageUrl) {
+    if (imageUrl.isNotEmpty) {
+      if (imageUrl.startsWith('http')) {
+        return [imageUrl];
+      } else {
+        return ['https://storage.googleapis.com/xplores/$imageUrl'];
+      }
     }
+
+    // Fallback image lokal jika kosong
+    return ['assets/images/default.jpg'];
   }
 
   void _navigateToTab(int index) {
-    if (index == 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fitur scan QR belum tersedia')),
-      );
-      return;
-    }
-    if (index == 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fitur peta belum tersedia')),
-      );
+    if (index == 2 || index == 1) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Fitur ini belum tersedia')));
       return;
     }
     Navigator.of(context).pushAndRemoveUntil(
@@ -92,556 +71,243 @@ class _DetailWisataPageState extends State<DetailWisataPage> {
 
   @override
   Widget build(BuildContext context) {
-    const double sliderHeight = 200;
-    const double infoHeight = 70;
-
     return Scaffold(
-      backgroundColor: Colors.blue[50],
       appBar: AppBar(
-        title: const Text(
-          'Detail',
-          style: TextStyle(
-            color: Colors.blue, // Warna biru
-            fontFamily: 'Poppins', // Gunakan font Poppins
-            fontWeight: FontWeight.bold, // Bold sedang (600 = semi-bold)
-          ),
-        ),
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        title: Text(widget.wisata.nama),
+        backgroundColor: Colors.white,
         foregroundColor: Colors.blue,
         centerTitle: true,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.favorite_border, color: Colors.blue),
+            icon: const Icon(Icons.favorite_border),
             onPressed: _goToFavorite,
-            tooltip: 'Tambah ke Favorit',
           ),
         ],
       ),
       body: SafeArea(
-        child: Column(
+        child: ListView(
           children: [
-            // SLIDER
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: SizedBox(
-                  height: sliderHeight,
-                  width: double.infinity,
-                  child: Stack(
-                    alignment: Alignment.bottomCenter,
-                    children: [
-                      PageView.builder(
-                        controller: _pageController,
-                        itemCount: images.length,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentImage = index;
-                          });
-                        },
-                        itemBuilder: (context, index) {
-                          return Image.asset(
-                            images[index],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          );
-                        },
+            _buildImageSlider(),
+            _buildInfo(),
+            _buildDeskripsi(),
+            _buildUlasanRingkasan(),
+            _buildDestinasiLainnya(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageSlider() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: SizedBox(
+          height: 200,
+          width: double.infinity,
+          child: Stack(
+            children: [
+              PageView.builder(
+                controller: _pageController,
+                itemCount: images.length,
+                onPageChanged: (index) => setState(() => _currentImage = index),
+                itemBuilder: (_, i) {
+                  final image = images[i];
+                  return image.startsWith('http')
+                      ? Image.network(
+                        image,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder:
+                            (_, __, ___) => const Icon(Icons.broken_image),
+                      )
+                      : Image.asset(
+                        image,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      );
+                },
+              ),
+              Positioned(
+                bottom: 10,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(images.length, (index) {
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: _currentImage == index ? 18 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color:
+                            _currentImage == index
+                                ? Colors.white
+                                : Colors.white54,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      Positioned(
-                        bottom: 10,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            images.length,
-                            (index) => AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              width: _currentImage == index ? 18 : 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color:
-                                    _currentImage == index
-                                        ? const Color.fromARGB(
-                                          255,
-                                          254,
-                                          254,
-                                          254,
-                                        )
-                                        : const Color.fromARGB(
-                                          255,
-                                          255,
-                                          255,
-                                          255,
-                                        ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  }),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfo() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              widget.wisata.nama,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            // INFO DESTINASI
-            Container(
-              height: infoHeight,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
+          ),
+          Row(
+            children: [
+              const Icon(Icons.star, color: Colors.amber, size: 16),
+              const SizedBox(width: 4),
+              Text(widget.wisata.rating.toString()),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeskripsi() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Text(
+        widget.wisata.deskripsi,
+        style: const TextStyle(fontSize: 14, color: Colors.black87),
+      ),
+    );
+  }
+
+  Widget _buildUlasanRingkasan() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          const Icon(Icons.reviews, color: Colors.blue),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) => ReviewListPage(
+                        namaWisata: widget.wisata.nama,
+                        totalReviews: "2.002 ulasan",
+                      ),
+                ),
+              );
+            },
+            child: const Text(
+              'Lihat ulasan',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.blue,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDestinasiLainnya() {
+    if (destinasiLainnya.isEmpty) return const SizedBox();
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Destinasi Lainnya',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 160,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: destinasiLainnya.length,
+              itemBuilder: (_, index) {
+                final item = destinasiLainnya[index];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (_) => DetailWisataPage(
+                              wisata: item,
+                              semuaDestinasi: widget.semuaDestinasi,
+                            ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    width: 140,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            item.image,
+                            height: 100,
+                            width: 140,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, __, ___) => const Icon(Icons.broken_image),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Text(
-                          widget.nama,
+                          item.nama,
                           style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
                         Row(
                           children: [
                             const Icon(
-                              Icons.location_on,
-                              color: Colors.blue,
-                              size: 16,
+                              Icons.star,
+                              color: Colors.amber,
+                              size: 14,
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              _getLokasi(widget.nama),
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
+                            Text(item.rating.toString()),
                           ],
                         ),
                       ],
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            widget.rating,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        '(2.002 ulasan)',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                );
+              },
             ),
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(top: 8),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 8,
-                      offset: Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 14, 16),
-                  children: [
-                    // Deskripsi
-                    const Text(
-                      'Deskripsi',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _getDeskripsi(widget.nama),
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 13,
-                        height: 1.5,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    // Fasilitas
-                    const Text(
-                      'Fasilitas Tersedia',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        fasilitasItem(Icons.hotel, 'Penginapan'),
-                        fasilitasItem(Icons.restaurant, 'Restoran'),
-                        fasilitasItem(
-                          Icons.grid_view_rounded,
-                          'Aktivitas &\nHiburan',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    // Ringkasan Ulasan
-                    const Text(
-                      'Ringkasan Ulasan',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Bar chart ulasan (hanya sampai tengah)
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: List.generate(5, (i) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 2,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      '${5 - i}',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontFamily: 'Poppins',
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Container(
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: Colors.amber[400],
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        // Bar hanya sampai tengah
-                                        width: (5 - i) * 18.0,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                        // Rating dan ulasan di kanan
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                widget.rating,
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    color: Colors.amber,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 2),
-                                  InkWell(
-                                    // Menggunakan InkWell untuk efek visual yang lebih baik
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) => ReviewListPage(
-                                                namaWisata: widget.nama,
-                                                totalReviews:
-                                                    '2.002 ulasan', // Kirim teks ulasan lengkap
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text(
-                                      '2.002 ulasan', // Mengubah teks dari '(2.002 ulasan)' menjadi '2.002 ulasan'
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
-                                        fontFamily: 'Poppins',
-                                        decoration:
-                                            TextDecoration
-                                                .underline, // Opsional: tambahkan underline untuk menunjukkan dapat diklik
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Destinasi Wisata Lainnya
-                    if (_destinasiLainnya.isNotEmpty)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Destinasi Wisata Lainnya',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                              InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) =>
-                                              const SemuaDestinasiPage(),
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  'Lihat Semua',
-                                  style: TextStyle(
-                                    color: Colors.blue[400],
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    fontFamily: 'Poppins',
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            height: 180, // Sesuaikan tinggi sesuai kebutuhan
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _destinasiLainnya.length,
-                              itemBuilder: (context, index) {
-                                final item = _destinasiLainnya[index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    // Navigasi ke DetailWisataPage dari destinasi lain
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) => DetailWisataPage(
-                                              nama: item['nama'],
-                                              image: item['image'],
-                                              rating: item['rating'],
-                                              semuaDestinasi:
-                                                  widget
-                                                      .semuaDestinasi, // Teruskan lagi semua destinasi
-                                            ),
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    width: 150, // Lebar setiap item
-                                    margin: const EdgeInsets.only(right: 16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Colors.black12,
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius:
-                                              const BorderRadius.vertical(
-                                                top: Radius.circular(12),
-                                              ),
-                                          child: Image.asset(
-                                            item['image'],
-                                            height: 100, // Tinggi gambar
-                                            width: double.infinity,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            item['nama'],
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 13,
-                                              fontFamily: 'Poppins',
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              const Icon(
-                                                Icons.star,
-                                                color: Colors.amber,
-                                                size: 16,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                item['rating'],
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: DiscoverNavBar(
-        currentIndex: 0,
-        onTabTapped: _navigateToTab,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Fitur scan QR belum tersedia')),
-          );
-        },
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.qr_code_scanner, color: Colors.white),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-    );
-  }
-
-  String _getLokasi(String nama) {
-    switch (nama) {
-      case 'Pantai Tanjung Bira':
-        return 'Bira, Bulukumba';
-      case 'Taman Purbakala Sumpang Bita':
-        return 'Pangkep, Sulawesi Selatan';
-      case 'Negeri Diatas Awan':
-        return 'Kab. Gowa';
-      default:
-        return '-';
-    }
-  }
-
-  String _getDeskripsi(String nama) {
-    switch (nama) {
-      case 'Pantai Tanjung Bira':
-        return 'Pantai Tanjung Bira adalah salah satu destinasi wisata terkenal di Sulawesi Selatan yang terletak di Kabupaten Bulukumba, sekitar 200 km dari Kota Makassar. Pantai ini dikenal dengan pasir putihnya yang halus seperti tepung, air laut yang jernih dengan gradasi warna biru yang menawan.';
-      case 'Taman Purbakala Sumpang Bita':
-        return 'Taman Purbakala Sumpang Bita adalah situs purbakala yang memiliki nilai sejarah tinggi, terletak di Kabupaten Pangkep, Sulawesi Selatan. Tempat ini menyimpan banyak peninggalan prasejarah berupa lukisan dinding dan artefak.';
-      case 'Negeri Diatas Awan':
-        return 'Negeri Diatas Awan adalah destinasi wisata alam di Kabupaten Gowa yang menawarkan pemandangan awan di atas pegunungan, sangat cocok untuk menikmati sunrise dan suasana sejuk.';
-      default:
-        return 'Deskripsi belum tersedia.';
-    }
-  }
-
-  Widget fasilitasItem(IconData icon, String label) {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: Colors.blue[50],
-          child: Icon(icon, color: Colors.blue, size: 28),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.blue,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Poppins',
           ),
-          textAlign: TextAlign.center,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

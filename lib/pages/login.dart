@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ras/services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -8,7 +9,57 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  void _handleLogin() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _isLoading = false);
+      _showDialog('Gagal', 'Email dan password tidak boleh kosong.');
+      return;
+    }
+
+    try {
+      final response = await ApiService().loginUser(email, password);
+
+      // Contoh: simpan data akun kalau perlu
+      // final akun = Akun.fromJson(response['data']);
+
+      Navigator.pushReplacementNamed(context, '/beranda');
+    } catch (e) {
+      _showDialog('Login Gagal', e.toString());
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +105,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   child: TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       hintText: 'Email',
                       border: OutlineInputBorder(
@@ -80,6 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   child: TextField(
+                    controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       hintText: 'Kata Sandi',
@@ -105,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // Masuk dengan & Lupa sandi sejajar
+                // Masuk dengan & Lupa sandi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -126,9 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () {},
                       child: const Text(
                         'Lupa sandi?',
-                        style: TextStyle(
-                          color: Colors.black,
-                        ), // Ubah jadi hitam
+                        style: TextStyle(color: Colors.black),
                       ),
                     ),
                   ],
@@ -141,18 +193,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(30),
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFA5E2FF), // Biru muda
-                        Color(0xFF4EA3FE), // Biru tua
-                      ],
+                      colors: [Color(0xFFA5E2FF), Color(0xFF4EA3FE)],
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.25), // Hitam samar
-                        offset: const Offset(0, 4), // Geser ke bawah
-                        blurRadius: 12, // Efek blur
+                        color: Colors.black.withOpacity(0.25),
+                        offset: const Offset(0, 4),
+                        blurRadius: 12,
                         spreadRadius: 0,
                       ),
                     ],
@@ -166,18 +215,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/beranda');
-                    },
-                    child: const Text(
-                      'Masuk',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 24,
-                        color: Colors.white,
-                      ),
-                    ),
+                    onPressed: _isLoading ? null : _handleLogin,
+                    child:
+                        _isLoading
+                            ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                            : const Text(
+                              'Masuk',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 24,
+                                color: Colors.white,
+                              ),
+                            ),
                   ),
                 ),
 

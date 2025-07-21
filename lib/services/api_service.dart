@@ -1,11 +1,14 @@
 // lib/services/api_service.dart
 import 'dart:convert'; // Untuk encode/decode JSON
-import 'package:http/http.dart' as http; // Import package http
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart'; // Import package http
 
 // Import model-model yang telah Anda buat
 import 'package:ras/models/akun.dart';
 import 'package:ras/models/wisata.dart';
-// ... import model-model lainnya
+import 'package:ras/models/penginapan.dart';
+import 'package:ras/models/kuliner.dart';
+import 'package:ras/models/favorites.dart';
 
 class ApiService {
   // Ganti ini dengan Base URL API Cloud Run Anda
@@ -31,28 +34,42 @@ class ApiService {
   }
 
   // Membuat akun baru (POST /api/akun)
-  Future<Akun> createAkun(
-    String nama,
-    String email,
-    String password,
-    String role,
-  ) async {
+  Future<Akun> createAkun({
+    required String username,
+    required String email,
+    required String password,
+    required String userRole,
+    required String nohp,
+  }) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/akun'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
       body: jsonEncode(<String, String>{
-        'nama': nama,
+        'username': username,
         'email': email,
-        'password': password, // Kirim password saat membuat akun
-        'role': role,
+        'password': password,
+        'user_role': userRole,
+        'nohp': nohp,
       }),
     );
 
-    if (response.statusCode == 201) {
-      // 201 Created
-      return Akun.fromJson(json.decode(response.body));
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final jsonResponse = json.decode(response.body);
+
+      // Jika respons API kamu langsung berupa objek akun:
+      if (jsonResponse is Map<String, dynamic>) {
+        return Akun.fromJson(jsonResponse);
+      }
+
+      // Kalau respons dibungkus dalam field "data" (misal: { "data": {...akun...} })
+      if (jsonResponse is Map<String, dynamic> &&
+          jsonResponse.containsKey('data')) {
+        return Akun.fromJson(jsonResponse['data']);
+      }
+
+      throw Exception('Format data akun tidak sesuai.');
     } else {
       throw Exception(
         'Failed to create account. Status: ${response.statusCode}, Body: ${response.body}',
@@ -108,7 +125,160 @@ class ApiService {
       );
     }
   }
+  // ========================== PENGINAPAN ==========================
 
-  // ... Tambahkan fungsi-fungsi lain untuk setiap rute yang Anda miliki di routes.go
-  // Misalnya: createWisata, updateWisata, deleteWisata, getAllKuliner, createTransaksi, dll.
+  // GET /api/penginapan
+  Future<List<Penginapan>> getAllPenginapan() async {
+    final response = await http.get(Uri.parse('$_baseUrl/penginapan'));
+    if (response.statusCode == 200) {
+      List jsonResponse = json.decode(response.body);
+      return jsonResponse.map((data) => Penginapan.fromJson(data)).toList();
+    } else {
+      throw Exception(
+        'Gagal memuat data penginapan. Status: ${response.statusCode}',
+      );
+    }
+  }
+
+  // GET /api/penginapan/{id}
+  Future<Map<String, dynamic>> getPenginapanById(int id) async {
+    final response = await http.get(Uri.parse('$_baseUrl/penginapan/$id'));
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Gagal memuat detail penginapan.');
+    }
+  }
+
+  // ========================== KULINER ==========================
+
+  // GET /api/kuliner
+  Future<List<dynamic>> getAllKuliner() async {
+    final response = await http.get(Uri.parse('$_baseUrl/kuliner'));
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Gagal memuat data kuliner.');
+    }
+  }
+
+  // GET /api/kuliner/{id}
+  Future<Map<String, dynamic>> getKulinerById(int id) async {
+    final response = await http.get(Uri.parse('$_baseUrl/kuliner/$id'));
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Gagal memuat detail kuliner.');
+    }
+  }
+
+  // ========================== FAVORIT ==========================
+
+  // GET /api/favoritwisata/{id}
+  Future<List<dynamic>> getFavoritWisata(int userId) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/favoritwisata/$userId'),
+    );
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Gagal memuat favorit wisata.');
+    }
+  }
+
+  // POST /api/user/wisata/favorites
+  Future<void> addFavoritWisata(int userId, int wisataId) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/user/wisata/favorites'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'user_id': userId, 'wisata_id': wisataId}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Gagal menambahkan favorit wisata.');
+    }
+  }
+
+  // DELETE /api/user/{user_id}/wisata/favorites/{wisata_id}
+  Future<void> deleteFavoritWisata(int userId, int wisataId) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/user/$userId/wisata/favorites/$wisataId'),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Gagal menghapus favorit wisata.');
+    }
+  }
+
+  // ========================== RATING ==========================
+
+  // POST /api/rating/wisata
+  Future<void> createRatingWisata(
+    int userId,
+    int wisataId,
+    double rating,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/rating/wisata'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': userId,
+        'wisata_id': wisataId,
+        'rating': rating,
+      }),
+    );
+    if (response.statusCode != 201) {
+      throw Exception('Gagal mengirim rating wisata.');
+    }
+  }
+
+  // GET /api/rating/wisata
+  Future<List<dynamic>> getAllRatingWisata() async {
+    final response = await http.get(Uri.parse('$_baseUrl/rating/wisata'));
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Gagal memuat semua rating wisata.');
+    }
+  }
+
+  // ========================== ULASAN ==========================
+
+  // GET /api/ulasan
+  Future<List<dynamic>> getAllUlasan() async {
+    final response = await http.get(Uri.parse('$_baseUrl/ulasan'));
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Gagal memuat ulasan.');
+    }
+  }
+}
+
+class SessionManager {
+  static Future<void> saveUserSession({
+    required int userId,
+    required String username,
+    required String email,
+    required String role,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('user_id', userId);
+    await prefs.setString('username', username);
+    await prefs.setString('email', email);
+    await prefs.setString('role', role);
+  }
+
+  static Future<Map<String, dynamic>> getUserSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'user_id': prefs.getInt('user_id'),
+      'username': prefs.getString('username'),
+      'email': prefs.getString('email'),
+      'role': prefs.getString('role'),
+    };
+  }
+
+  static Future<void> clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
 }
