@@ -8,7 +8,6 @@ import 'package:ras/models/akun.dart';
 import 'package:ras/models/wisata.dart';
 import 'package:ras/models/penginapan.dart';
 import 'package:ras/models/kuliner.dart';
-import 'package:ras/models/favorites.dart';
 
 class ApiService {
   // Ganti ini dengan Base URL API Cloud Run Anda
@@ -77,7 +76,7 @@ class ApiService {
     }
   }
 
-  // Login User (POST /api/loginuser)
+  // loginUser di ApiService
   Future<Map<String, dynamic>> loginUser(String email, String password) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/loginuser'),
@@ -88,8 +87,9 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      // Asumsi backend mengembalikan data user dan/atau token
-      return json.decode(response.body);
+      final jsonData = json.decode(response.body);
+      print(' Response login: $jsonData');
+      return jsonData;
     } else {
       throw Exception(
         'Failed to login. Status: ${response.statusCode}, Body: ${response.body}',

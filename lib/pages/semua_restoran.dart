@@ -33,10 +33,8 @@ class _SemuaRestoranPageState extends State<SemuaRestoranPage> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       debugPrint('Error memuat restoran: $e');
+      setState(() => _isLoading = false);
     }
   }
 
@@ -51,7 +49,7 @@ class _SemuaRestoranPageState extends State<SemuaRestoranPage> {
   }
 
   void _navigateToTab(int index) {
-    if (index == 2 || index == 1) {
+    if (index == 1 || index == 2) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Fitur ini belum tersedia')));
@@ -143,6 +141,8 @@ class _SemuaRestoranPageState extends State<SemuaRestoranPage> {
                                       );
                                     },
                                     child: Container(
+                                      width: 408,
+                                      height: 333,
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(8),
@@ -165,8 +165,8 @@ class _SemuaRestoranPageState extends State<SemuaRestoranPage> {
                                                 ),
                                             child: Image.network(
                                               restoran.image,
-                                              height: 253,
                                               width: 408,
+                                              height: 253,
                                               fit: BoxFit.cover,
                                               errorBuilder:
                                                   (_, __, ___) => const Icon(
@@ -175,9 +175,18 @@ class _SemuaRestoranPageState extends State<SemuaRestoranPage> {
                                             ),
                                           ),
                                           Container(
+                                            width: 408,
+                                            height: 80,
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 19,
                                               vertical: 14,
+                                            ),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.vertical(
+                                                    bottom: Radius.circular(8),
+                                                  ),
                                             ),
                                             child: Row(
                                               mainAxisAlignment:
@@ -238,8 +247,6 @@ class _SemuaRestoranPageState extends State<SemuaRestoranPage> {
                                                   ),
                                                 ),
                                                 Row(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.center,
                                                   children: [
                                                     const Icon(
                                                       Icons.star,

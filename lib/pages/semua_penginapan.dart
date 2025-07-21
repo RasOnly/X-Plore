@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:ras/services/api_service.dart';
 import 'package:ras/models/penginapan.dart';
-import 'detail_penginapan.dart';
-import 'discover_page.dart';
+import 'package:ras/pages/detail_penginapan.dart';
+import 'package:ras/pages/discover_page.dart';
+import 'package:ras/services/api_service.dart';
 
 class SemuaPenginapanPage extends StatefulWidget {
   const SemuaPenginapanPage({super.key});
@@ -13,7 +13,6 @@ class SemuaPenginapanPage extends StatefulWidget {
 
 class _SemuaPenginapanPageState extends State<SemuaPenginapanPage> {
   final TextEditingController _searchController = TextEditingController();
-
   List<Penginapan> _semuaPenginapan = [];
   List<Penginapan> _hasilPencarian = [];
   bool _isLoading = true;
@@ -27,14 +26,14 @@ class _SemuaPenginapanPageState extends State<SemuaPenginapanPage> {
 
   Future<void> fetchPenginapan() async {
     try {
-      final penginapanList = await ApiService().getAllPenginapan();
+      final list = await ApiService().getAllPenginapan();
       setState(() {
-        _semuaPenginapan = penginapanList;
-        _hasilPencarian = penginapanList;
+        _semuaPenginapan = list;
+        _hasilPencarian = list;
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Gagal memuat penginapan: $e');
+      debugPrint('Error fetching penginapan: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -44,24 +43,16 @@ class _SemuaPenginapanPageState extends State<SemuaPenginapanPage> {
     setState(() {
       _hasilPencarian =
           _semuaPenginapan
-              .where(
-                (penginapan) => penginapan.nama.toLowerCase().contains(query),
-              )
+              .where((p) => p.nama.toLowerCase().contains(query))
               .toList();
     });
   }
 
   void _navigateToTab(int index) {
-    if (index == 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fitur scan QR belum tersedia')),
-      );
-      return;
-    }
-    if (index == 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fitur peta belum tersedia')),
-      );
+    if (index == 1 || index == 2) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Fitur ini belum tersedia')));
       return;
     }
     Navigator.of(context).pushAndRemoveUntil(
@@ -89,140 +80,142 @@ class _SemuaPenginapanPageState extends State<SemuaPenginapanPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.blue),
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    // Search Bar
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          hintText: 'Cari penginapan',
-                          border: InputBorder.none,
-                          icon: Icon(Icons.search),
-                        ),
-                      ),
-                    ),
-                    // Grid Penginapan
-                    Expanded(
-                      child:
-                          _hasilPencarian.isEmpty
-                              ? const Center(
-                                child: Text('Penginapan tidak ditemukan'),
-                              )
-                              : GridView.builder(
-                                itemCount: _hasilPencarian.length,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      mainAxisSpacing: 16,
-                                      crossAxisSpacing: 16,
-                                      childAspectRatio: 3 / 2.5,
-                                    ),
-                                itemBuilder: (context, index) {
-                                  final item = _hasilPencarian[index];
-                                  return GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) => DetailPenginapanPage(
-                                                penginapan: item,
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 4,
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius:
-                                                const BorderRadius.vertical(
-                                                  top: Radius.circular(12),
-                                                ),
-                                            child: Image.network(
-                                              item.image,
-                                              height: 90,
-                                              width: double.infinity,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.all(8.0),
-                                            child: Text(
-                                              item.nama,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 13,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                const Icon(
-                                                  Icons.star,
-                                                  color: Colors.amber,
-                                                  size: 16,
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  item.rating.toStringAsFixed(
-                                                    1,
-                                                  ),
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                    ),
-                  ],
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          children: [
+            // 🔍 Search Bar
+            Container(
+              margin: const EdgeInsets.only(bottom: 16, top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  hintText: 'Cari penginapan',
+                  border: InputBorder.none,
+                  icon: Icon(Icons.search),
                 ),
               ),
+            ),
+            // 🏨 Horizontal List
+            _isLoading
+                ? const Expanded(
+                  child: Center(child: CircularProgressIndicator()),
+                )
+                : _hasilPencarian.isEmpty
+                ? const Expanded(
+                  child: Center(child: Text('Penginapan tidak ditemukan')),
+                )
+                : Expanded(
+                  child: ListView.separated(
+                    itemCount: _hasilPencarian.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final item = _hasilPencarian[index];
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => DetailPenginapanPage(penginapan: item),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              // Gambar
+                              ClipRRect(
+                                borderRadius: const BorderRadius.horizontal(
+                                  left: Radius.circular(12),
+                                ),
+                                child: Image.network(
+                                  item.image,
+                                  width: 120,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (_, __, ___) =>
+                                          const Icon(Icons.broken_image),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Informasi
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 8,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        item.nama,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.star,
+                                            color: Colors.amber,
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            item.rating.toStringAsFixed(1),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+          ],
+        ),
+      ),
       bottomNavigationBar: DiscoverNavBar(
         currentIndex: 0,
         onTabTapped: _navigateToTab,

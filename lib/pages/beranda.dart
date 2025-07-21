@@ -67,7 +67,6 @@ class _BerandaPageState extends State<BerandaPage> {
       backgroundColor: Colors.blue[400],
       body: Stack(
         children: [
-          // ==== SLIDER ====
           Positioned(
             top: 100,
             left: 0,
@@ -85,8 +84,6 @@ class _BerandaPageState extends State<BerandaPage> {
               },
             ),
           ),
-
-          // ==== HEADER ====
           Positioned(
             top: 50,
             left: 20,
@@ -126,8 +123,6 @@ class _BerandaPageState extends State<BerandaPage> {
               ],
             ),
           ),
-
-          // ==== BODY ====
           Positioned(
             top: 285,
             left: 0,
@@ -166,7 +161,7 @@ class _BerandaPageState extends State<BerandaPage> {
                   ),
                   const SizedBox(height: 20),
                   _sectionTitle(
-                    'Kuliner Populer',
+                    'Restoran Populer',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -207,14 +202,12 @@ class _BerandaPageState extends State<BerandaPage> {
                             item.nama.toLowerCase().contains(_searchQuery),
                     builder:
                         (item, list) => DetailPenginapanPage(penginapan: item),
-                    horizontal: false, // << tampilkan vertikal
+                    horizontal: false,
                   ),
                 ],
               ),
             ),
           ),
-
-          // ==== SEARCH BAR ====
           Positioned(
             top: 260,
             left: MediaQuery.of(context).size.width / 2 - 172,
@@ -375,12 +368,21 @@ class _BerandaPageState extends State<BerandaPage> {
               height: 100,
               width: 150,
               fit: BoxFit.cover,
-              errorBuilder:
-                  (_, __, ___) => Container(
-                    height: 100,
-                    color: Colors.grey[300],
-                    child: const Center(child: Icon(Icons.image_not_supported)),
-                  ),
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) {
+                  print('[✅ BERANDA] Gambar berhasil dimuat: $image');
+                  return child;
+                }
+                return const Center(child: CircularProgressIndicator());
+              },
+              errorBuilder: (_, __, ___) {
+                print('[❌ BERANDA] Gagal memuat gambar: $image');
+                return Container(
+                  height: 100,
+                  color: Colors.grey[300],
+                  child: const Center(child: Icon(Icons.image_not_supported)),
+                );
+              },
             ),
           ),
           Padding(
@@ -424,12 +426,21 @@ class _BerandaPageState extends State<BerandaPage> {
               height: 200,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder:
-                  (_, __, ___) => Container(
-                    height: 200,
-                    color: Colors.grey[300],
-                    child: const Center(child: Icon(Icons.image_not_supported)),
-                  ),
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) {
+                  print('[✅ BERANDA] Gambar berhasil dimuat: ${item.image}');
+                  return child;
+                }
+                return const Center(child: CircularProgressIndicator());
+              },
+              errorBuilder: (_, __, ___) {
+                print('[❌ BERANDA] Gagal memuat gambar: ${item.image}');
+                return Container(
+                  height: 200,
+                  color: Colors.grey[300],
+                  child: const Center(child: Icon(Icons.image_not_supported)),
+                );
+              },
             ),
           ),
           Padding(
